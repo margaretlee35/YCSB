@@ -218,7 +218,10 @@ def get_classpath_from_maven(module):
            "dependency:list",
            "-DoutputAbsoluteArtifactFilename",
            "-DappendOutput=false",
-           "-DoutputFile=" + output_file.name
+           "-DoutputFile=" + output_file.name 
+           # for maven build error debugging
+           #"-e", 
+           #"-X"
            ]
     debug("Running '" + " ".join(cmd) + "'")
     subprocess.check_call(cmd)

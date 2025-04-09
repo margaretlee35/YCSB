@@ -49,6 +49,7 @@ public class BasicDB extends DB {
   protected static Map<Integer, Integer> deletes;
   
   protected boolean verbose;
+  protected boolean debugpim;
   protected boolean randomizedelay;
   protected int todelay;
   protected boolean count;
@@ -85,6 +86,7 @@ public class BasicDB extends DB {
     todelay = Integer.parseInt(getProperties().getProperty(SIMULATE_DELAY, SIMULATE_DELAY_DEFAULT));
     randomizedelay = Boolean.parseBoolean(getProperties().getProperty(RANDOMIZE_DELAY, RANDOMIZE_DELAY_DEFAULT));
     count = Boolean.parseBoolean(getProperties().getProperty(COUNT, COUNT_DEFAULT));
+    debugpim = true;
     if (verbose) {
       synchronized (System.out) {
         System.out.println("***************** properties *****************");
@@ -136,7 +138,21 @@ public class BasicDB extends DB {
   public Status read(String table, String key, Set<String> fields, Map<String, ByteIterator> result) {
     delay();
 
-    if (verbose) {
+    if (debugpim) {
+      StringBuilder sb = getStringBuilder();
+      sb.append("READ ").append(" ").append(key).append(" [ ");
+      if (fields != null) {
+        for (String f : fields) {
+          String fieldNo = f.split("=")[0];
+          sb.append(fieldNo).append(" ");
+        }
+      } else {
+        sb.append("<all fields>");
+      }
+
+      sb.append("]");
+      System.out.println(sb);
+    } else if (verbose) {
       StringBuilder sb = getStringBuilder();
       sb.append("READ ").append(table).append(" ").append(key).append(" [ ");
       if (fields != null) {
@@ -172,8 +188,21 @@ public class BasicDB extends DB {
   public Status scan(String table, String startkey, int recordcount, Set<String> fields,
                      Vector<HashMap<String, ByteIterator>> result) {
     delay();
+    if (debugpim) {
+      StringBuilder sb = getStringBuilder();
+      sb.append("SCAN ").append(" ").append(startkey).append(" ").append(recordcount).append(" [ ");
+      if (fields != null) {
+        for (String f : fields) {
+          String fieldNo = f.split("=")[0];
+          sb.append(fieldNo).append(" ");
+        }
+      } else {
+        sb.append("<all fields>");
+      }
 
-    if (verbose) {
+      sb.append("]");
+      System.out.println(sb);
+    } else if (verbose) {
       StringBuilder sb = getStringBuilder();
       sb.append("SCAN ").append(table).append(" ").append(startkey).append(" ").append(recordcount).append(" [ ");
       if (fields != null) {
@@ -207,7 +236,17 @@ public class BasicDB extends DB {
   public Status update(String table, String key, Map<String, ByteIterator> values) {
     delay();
 
-    if (verbose) {
+    if (debugpim) {
+      StringBuilder sb = getStringBuilder();
+      sb.append("UPDATE ").append(" ").append(key).append(" [ ");
+      if (values != null) {
+        for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
+          sb.append(entry.getKey()).append(" ");
+        }
+      }
+      sb.append("]");
+      System.out.println(sb);
+    } else if (verbose) {
       StringBuilder sb = getStringBuilder();
       sb.append("UPDATE ").append(table).append(" ").append(key).append(" [ ");
       if (values != null) {
@@ -238,7 +277,18 @@ public class BasicDB extends DB {
   public Status insert(String table, String key, Map<String, ByteIterator> values) {
     delay();
 
-    if (verbose) {
+    if (debugpim) {
+      StringBuilder sb = getStringBuilder();
+      sb.append("INSERT ").append(" ").append(key).append(" [ ");
+      if (values != null) {
+        for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
+          sb.append(entry.getKey()).append(" ");
+        }
+      }
+
+      sb.append("]");
+      System.out.println(sb);
+    } else if (verbose) {
       StringBuilder sb = getStringBuilder();
       sb.append("INSERT ").append(table).append(" ").append(key).append(" [ ");
       if (values != null) {
@@ -269,7 +319,11 @@ public class BasicDB extends DB {
   public Status delete(String table, String key) {
     delay();
 
-    if (verbose) {
+    if (debugpim) {
+      StringBuilder sb = getStringBuilder();
+      sb.append("DELETE ").append(" ").append(key);
+      System.out.println(sb);
+    } else if (verbose) {
       StringBuilder sb = getStringBuilder();
       sb.append("DELETE ").append(table).append(" ").append(key);
       System.out.println(sb);
