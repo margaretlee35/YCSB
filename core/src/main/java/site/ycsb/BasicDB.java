@@ -19,10 +19,19 @@ package site.ycsb;
 
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
+/*#import btree4j.indexer.BasicIndexQuery.IndexConditionANY;
+import btree4j.utils.datetime.StopWatch;
+import btree4j.utils.io.FileUtils;
+import btree4j.utils.lang.ArrayUtils;
+import btree4j.utils.lang.Primitives;
+import btree4j.utils.lang.PrintUtils;*/
+import btree4j.BTree;
+import btree4j.Value;
+import btree4j.BTreeException;
+import java.io.File;
 
 /**
  * Basic DB that just prints out the requested operations, instead of doing them against a database.
@@ -53,6 +62,9 @@ public class BasicDB extends DB {
   protected boolean randomizedelay;
   protected int todelay;
   protected boolean count;
+
+  protected File idxFile;
+  protected BTree btree;
 
   public BasicDB() {
     todelay = 0;
@@ -111,6 +123,14 @@ public class BasicDB extends DB {
       }
       counter++;
     }
+
+    idxFile = new File("idx.bt");
+    btree = new BTree(idxFile);
+    try {
+      btree.init(false);
+    } catch (BTreeException e) {
+      //do something
+    }
   }
 
   protected static final ThreadLocal<StringBuilder> TL_STRING_BUILDER = new ThreadLocal<StringBuilder>() {
@@ -144,14 +164,14 @@ public class BasicDB extends DB {
       if (fields != null) {
         for (String f : fields) {
           String fieldNo = f.split("=")[0];
-          sb.append(fieldNo).append(" ");
+          sb.append(fieldNo.replace("field", "")).append(" ");
         }
       } else {
         sb.append("<all fields>");
       }
 
       sb.append("]");
-      System.out.println(sb);
+      //System.out.println(sb);
     } else if (verbose) {
       StringBuilder sb = getStringBuilder();
       sb.append("READ ").append(table).append(" ").append(key).append(" [ ");
@@ -164,13 +184,25 @@ public class BasicDB extends DB {
       }
 
       sb.append("]");
-      System.out.println(sb);
+      //System.out.println(sb);
     }
 
     if (count) {
       incCounter(reads, hash(table, key, fields));
     }
     
+    try {
+      //btree.findValue(new Value(key));
+      //int globalIdx = btree.findGlobalIndex(new Value(key));
+      long globalIdx = btree.findGlobalIndex(new Value(key));
+
+      StringBuilder sb = getStringBuilder();
+      sb.append("READ ").append(key).append(" at idx: ").append(globalIdx);
+      System.out.println(sb);
+    } catch (BTreeException e) {
+      System.err.println("B‑Tree insert failed: " + e);
+      return Status.ERROR;
+    }
     return Status.OK;
   }
 
@@ -194,7 +226,7 @@ public class BasicDB extends DB {
       if (fields != null) {
         for (String f : fields) {
           String fieldNo = f.split("=")[0];
-          sb.append(fieldNo).append(" ");
+          sb.append(fieldNo.replace("field", "")).append(" ");
         }
       } else {
         sb.append("<all fields>");
@@ -241,7 +273,7 @@ public class BasicDB extends DB {
       sb.append("UPDATE ").append(" ").append(key).append(" [ ");
       if (values != null) {
         for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
-          sb.append(entry.getKey()).append(" ");
+          sb.append(entry.getKey().replace("field", "")).append(" ");
         }
       }
       sb.append("]");
@@ -282,12 +314,12 @@ public class BasicDB extends DB {
       sb.append("INSERT ").append(" ").append(key).append(" [ ");
       if (values != null) {
         for (Map.Entry<String, ByteIterator> entry : values.entrySet()) {
-          sb.append(entry.getKey()).append(" ");
+          sb.append(entry.getKey().replace("field", "")).append(" ");
         }
       }
 
       sb.append("]");
-      System.out.println(sb);
+      //System.out.println(sb);
     } else if (verbose) {
       StringBuilder sb = getStringBuilder();
       sb.append("INSERT ").append(table).append(" ").append(key).append(" [ ");
@@ -298,11 +330,24 @@ public class BasicDB extends DB {
       }
 
       sb.append("]");
-      System.out.println(sb);
+      //System.out.println(sb);
     }
 
     if (count) {
       incCounter(inserts, hash(table, key, values));
+    }
+
+    try {
+      btree.addValue(new Value(key), 0x12345678);
+      //int globalIdx = btree.findGlobalIndex(new Value(key));
+      /*long globalIdx = btree.findGlobalIndex(new Value(key));
+
+      StringBuilder sb = getStringBuilder();
+      sb.append("INSERT ").append(key).append(" into ").append(globalIdx);
+      System.out.println(sb);*/
+    } catch (BTreeException e) {
+      System.err.println("B‑Tree insert failed: " + e);
+      return Status.ERROR;
     }
     
     return Status.OK;
@@ -349,6 +394,15 @@ public class BasicDB extends DB {
         System.out.println("[INSERTS], Uniques, " + inserts.size());
         System.out.println("[DELETES], Uniques, " + deletes.size());
       }
+    }
+
+    try {
+      if (btree != null) {
+        btree.flush();
+        btree.close();
+      }
+    } catch (BTreeException e) {
+      //throw new DBException("Error");
     }
   }
   
